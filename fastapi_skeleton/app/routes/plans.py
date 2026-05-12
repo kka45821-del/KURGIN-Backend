@@ -1,13 +1,19 @@
-from __future__ import annotations
-
 from fastapi import APIRouter
 
 from ..db import list_plans
-from ..models import PlanPublic
 
 router = APIRouter()
 
 
-@router.get("", response_model=list[PlanPublic])
-def get_plans():
-    return [PlanPublic(**plan) for plan in list_plans()]
+@router.get("")
+def plans():
+    # DB-backed local MVP. Production values should be synced from Admin.
+    return [
+        {
+            "code": plan["id"],
+            "title": plan["name"],
+            "price_minor": plan["price_minor"],
+            "currency": plan["currency"],
+        }
+        for plan in list_plans()
+    ]

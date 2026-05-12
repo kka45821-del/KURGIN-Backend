@@ -1,27 +1,23 @@
-from __future__ import annotations
-
-from typing import Any, Dict, List, Optional
-
 from pydantic import BaseModel, EmailStr, Field
 
 
 class UserPublic(BaseModel):
     id: str
     email: EmailStr
-    roles: List[str]
+    roles: list[str]
     plan: str
     status: str = "active"
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=10, max_length=256)
+    password: str = Field(min_length=10, max_length=72)
     requested_role: str = "buyer"
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=1, max_length=256)
+    password: str = Field(min_length=1, max_length=72)
 
 
 class TokenResponse(BaseModel):
@@ -33,62 +29,27 @@ class TokenResponse(BaseModel):
 
 class AccessCheckRequest(BaseModel):
     resource: str
-    context: Dict[str, Any] = Field(default_factory=dict)
+    context: dict = Field(default_factory=dict)
 
 
 class AccessCheckResponse(BaseModel):
     resource: str
     allowed: bool
     reason: str
-    roles: List[str]
-    plan: str
-
-
-class PlanPublic(BaseModel):
-    id: str
-    name: str
-    price_minor: int
-    currency: str
-    features: List[str]
+    user_plan: str
+    user_roles: list[str]
 
 
 class PaymentCheckoutRequest(BaseModel):
     plan_id: str
-    guest_email: Optional[EmailStr] = None
+    guest_email: EmailStr | None = None
 
 
 class PaymentStatusResponse(BaseModel):
     id: str
+    plan_id: str
     status: str
     provider: str
-    plan_id: str
     amount_minor: int
     currency: str
-    checkout_url: Optional[str] = None
-    message: str
-
-
-class CollectionCreateRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=160)
-    client_name: Optional[str] = Field(default=None, max_length=160)
-    notes: Optional[str] = Field(default=None, max_length=2000)
-
-
-class CollectionPublic(BaseModel):
-    id: str
-    title: str
-    client_name: Optional[str] = None
-    notes: Optional[str] = None
-    owner_user_id: str
-    status: str = "draft"
-
-
-class ScoreRequest(BaseModel):
-    shape: str
-    crownAngle: Optional[float] = None
-    pavilionAngle: Optional[float] = None
-    tablePercent: Optional[float] = None
-    depthPercent: Optional[float] = None
-    crownPercent: Optional[float] = None
-    pavilionPercent: Optional[float] = None
-    girdlePercent: Optional[float] = None
+    message: str | None = None

@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends
 
-from ..db import list_audit_logs
 from ..security import require_admin
 
 router = APIRouter()
@@ -10,4 +7,5 @@ router = APIRouter()
 
 @router.get("/audit")
 def audit_log(user: dict = Depends(require_admin)):
-    return list_audit_logs()
+    # TODO: Query admin_audit_logs from PostgreSQL.
+    return {"items": [], "actor": user["id"], "status": "audit_db_not_connected"}

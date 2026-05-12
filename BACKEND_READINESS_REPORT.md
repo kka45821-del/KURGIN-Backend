@@ -2,103 +2,140 @@
 
 ## Executive decision
 
-Backend-auth is currently **not confirmed as production-ready**.
+KURGIN Backend Auth MVP V1 is now ready for local and Docker-based cloud readiness testing.
 
-The frontend audit is complete for:
+The backend is still **not production identity infrastructure** until PostgreSQL, refresh-token sessions, email verification, password reset, rate limiting, real payment sync, audit expansion and deployment secret management are completed.
+
+## Confirmed completed layers
 
 ```txt
 /score/ gateway
-/diamonds/ → Analyzer
+/diamonds/ → Analyzer URL parameter bridge
 /workspace/ access page
+Backend Auth MVP V1
+Dockerfile
+docker-compose.yml
+GitHub Actions CI/deploy-readiness workflow
+Frontend KurginAPI bridge
+Workspace auth-aware UI script
 ```
 
-The next blocker is backend readiness for authorization and private data.
-
-## Confirmed frontend/app layers
+## Current backend runtime
 
 ```txt
-KURGIN Website
-→ public PWA / Vercel / static frontend
-
-KURGIN Analyzer
-→ Streamlit analytical application
-
-KURGIN Admin
-→ internal CMS/admin shell
+FastAPI
+JWT access tokens
+passlib/bcrypt password hashing
+SQLite local MVP persistence
+role/plan access policy
+payment status contract only
+workspace collections MVP
 ```
 
-## Missing production backend confirmations
+## Cloud deployment readiness
+
+### Docker
+
+`fastapi_skeleton/Dockerfile` uses `python:3.11-slim`, installs runtime dependencies, creates a non-root app user, exposes port 8000 and runs:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+```
+
+### Local Docker Compose
+
+`docker-compose.yml` runs the backend with persistent SQLite data volume:
+
+```bash
+docker compose up --build
+```
+
+Health check:
 
 ```txt
-Auth provider
-User database
-Role model
-Session model
-Password strategy
-Protected API endpoints
-Payment status storage
-Workspace storage
-Admin audit logs
-Secrets management
-Rate limiting
-CORS policy
+http://127.0.0.1:8000/health
 ```
 
-## Readiness matrix
+### GitHub Actions
 
-| Area | Status | Notes |
-|---|---|---|
-| Public Website | Ready for current phase | Static public layer only |
-| Score Gateway | Ready | Does not expose formula |
-| Diamonds → Analyzer | Ready frontend-side | Passes stone params to Analyzer URL |
-| Workspace V1 | Ready as landing/access page | No private data simulation |
-| Analyzer | MVP ready | Local formula default, cloud-ready architecture |
-| Admin | Skeleton/MVP | Needs real backend sync |
-| Auth backend | Not ready | Must be implemented before real users |
-| Database | Not ready | Schema proposed in this package |
-| Payment backend | Not ready | Guest checkout must be persisted server-side |
-| Formula API | Not ready production-side | Cloud API contract required |
+`.github/workflows/deploy.yml` checks:
+
+```txt
+ruff lint
+local smoke test
+Docker build
+optional Render deploy hook
+```
+
+## SQLite to cloud / PostgreSQL plan
+
+### Fastest first deploy with SQLite
+
+Use SQLite only for a temporary private preview. Persist the SQLite file in a mounted platform volume.
+
+Set:
+
+```txt
+KURGIN_DATABASE_URL=sqlite:////app/data/kurgin_auth_mvp.sqlite3
+```
+
+This is acceptable only for initial smoke tests and private demos.
+
+### Recommended first public backend
+
+Switch to PostgreSQL before accepting real users. The existing `database/schema_postgres.sql` is the contract baseline.
+
+Required steps:
+
+```txt
+1. Create managed PostgreSQL database.
+2. Run database/schema_postgres.sql.
+3. Seed database/seed_roles_plans.sql.
+4. Set KURGIN_DATABASE_URL to the provider PostgreSQL URL.
+5. Replace SQLite db.py implementation with PostgreSQL adapter.
+6. Re-run smoke tests against staging.
+```
+
+Until step 5 is implemented, PostgreSQL remains a contract target, not the active runtime.
+
+## Required environment variables
+
+```txt
+KURGIN_ENVIRONMENT=production
+KURGIN_DATABASE_URL=<sqlite preview url or postgres url>
+KURGIN_JWT_SECRET=<strong secret from platform env>
+KURGIN_ALLOWED_ORIGINS=https://kurgin-website.vercel.app,https://cvdrap.ru
+```
+
+Never commit `.env` or real secrets.
 
 ## Go / No-go
 
 ### Allowed now
 
 ```txt
-Public pages
-Mock catalog data
-Precomputed public score display
-Analyzer link passing URL params
-Workspace access page
-Admin UI mock/skeleton
+Private deploy preview
+Health check
+Swagger review
+Frontend bridge integration
+Auth smoke tests
+Payment status contract testing
+Workspace role UI testing
 ```
 
 ### Not allowed yet
 
 ```txt
-Real login
-Password collection
-Admin credentials
-Role-based access enforcement
-B2B price exposure
-Payment confirmation
-Saved reports with personal data
-Client cards
-Private Workspace collections
+Real payments
+Real B2B price exposure
+Production customer auth
+Password reset promises
+Email verification promises
+Permanent customer report storage
 ```
 
-## Required backend decision
-
-KURGIN must choose one of these paths:
+## Next priority
 
 ```txt
-Path A: FastAPI + PostgreSQL
-Path B: Supabase Auth + PostgreSQL
-Path C: Yandex Cloud API + Managed PostgreSQL
-```
-
-Recommended current path:
-
-```txt
-FastAPI contract + PostgreSQL schema first.
-Deployment target can remain flexible.
+Deploy private backend preview → connect KurginAPI baseURL → test Website ↔ Backend auth bridge.
 ```

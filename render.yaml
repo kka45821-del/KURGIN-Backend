@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: kurgin-backend
+    env: docker
+    rootDir: fastapi_skeleton
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: KURGIN_ENVIRONMENT
+        value: production
+      - key: KURGIN_DATABASE_URL
+        sync: false
+      - key: KURGIN_JWT_SECRET
+        sync: false
+      - key: KURGIN_ALLOWED_ORIGINS
+        value: https://kurgin-website.vercel.app,https://cvdrap.ru

@@ -1,55 +1,73 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated, Any, Dict, Optional
+from typing import Annotated, Any
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from .config import settings
-from .db import get_user_by_id, public_user
+from .db import get_user_by_id
+
+try:  # Preferred dependency from requirements.txt
+    from jose import JWTError, jwt
+except Exception:  # Local fallback for environments with PyJWT but without python-jose
+    import jwt  # type: ignore
+    from jwt import InvalidTokenError as JWTError  # type: ignore
 
 bearer = HTTPBearer(auto_error=False)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _bcrypt_bytes(password: str) -> bytes:
+    data = password.encode("utf-8")
+    if len(data) > 72:
+        raise ValueError("Password is too long for bcrypt")
+    return data
 
 
 def hash_password(password: str) -> str:
-    """Hash a password for storage.
+    """Hash password with passlib/bcrypt and fallback to direct bcrypt.
 
-    Never store raw passwords. This MVP uses passlib/bcrypt.
-    Production should also add breach-password checks and rate limiting.
+    The fallback exists because some Python 3.13 environments combine passlib
+    1.7.4 with a newer bcrypt backend that raises during backend detection.
+    Requirements pin bcrypt to a passlib-compatible range, but this keeps local
+    smoke tests resilient.
     """
-
-    return pwd_context.hash(password)
+    try:
+        return _pwd_context.hash(password)
+    except Exception:
+        return bcrypt.hashpw(_bcrypt_bytes(password), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    try:
+        return _pwd_context.verify(password, password_hash)
+    except Exception:
+        return bcrypt.checkpw(_bcrypt_bytes(password), password_hash.encode("utf-8"))
 
 
-def create_access_token(user: Dict[str, Any]) -> str:
+def create_access_token(user: dict[str, Any]) -> str:
     now = datetime.now(timezone.utc)
-    expires_at = now + timedelta(minutes=settings.access_token_expire_minutes)
-
+    expires = now + timedelta(minutes=settings.access_token_expire_minutes)
     payload = {
+        "sub": user["id"],
+        "email": user["email"],
+        "roles": user.get("roles", []),
+        "plan": user.get("plan", "free"),
         "iss": settings.jwt_issuer,
         "aud": settings.jwt_audience,
         "iat": int(now.timestamp()),
-        "exp": int(expires_at.timestamp()),
-        "sub": user["id"],
-        "email": user["email"],
-        "roles": list(user.get("roles", [])),
-        "plan": user.get("plan", "free"),
-        "typ": "access",
+        "exp": int(expires.timestamp()),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> Dict[str, Any]:
+def decode_access_token(token: str) -> dict[str, Any]:
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
@@ -57,42 +75,27 @@ def decode_access_token(token: str) -> Dict[str, Any]:
             issuer=settings.jwt_issuer,
         )
     except JWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token") from exc
-
-    if payload.get("typ") != "access":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
-
-    return payload
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
 
-def get_optional_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
-) -> Optional[Dict[str, Any]]:
+def token_expires_in_seconds() -> int:
+    return settings.access_token_expire_minutes * 60
+
+
+def get_current_user(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]) -> dict[str, Any]:
     if credentials is None:
-        return None
-
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     payload = decode_access_token(credentials.credentials)
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")
-
     user = get_user_by_id(str(user_id))
     if user is None or user.get("status") != "active":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
-
-    return public_user(user)
-
-
-def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
-) -> Dict[str, Any]:
-    user = get_optional_current_user(credentials)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     return user
 
 
-def require_admin(user: Annotated[Dict[str, Any], Depends(get_current_user)]) -> Dict[str, Any]:
+def require_admin(user: Annotated[dict, Depends(get_current_user)]) -> dict:
     if "admin" not in user.get("roles", []):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin role required")
     return user

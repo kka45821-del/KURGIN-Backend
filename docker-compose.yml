@@ -1,0 +1,26 @@
+services:
+  kurgin-backend:
+    build:
+      context: ./fastapi_skeleton
+      dockerfile: Dockerfile
+    container_name: kurgin-backend-auth-mvp
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./fastapi_skeleton/.env.example
+    environment:
+      KURGIN_ENVIRONMENT: development
+      # Container path. Data is persisted in the Docker volume below.
+      KURGIN_DATABASE_URL: sqlite:////app/data/kurgin_auth_mvp.sqlite3
+      PORT: 8000
+    volumes:
+      - kurgin_backend_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  kurgin_backend_data:

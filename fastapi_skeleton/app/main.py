@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -12,22 +10,20 @@ from .routes import access, admin, auth, payments, plans, score, workspace
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize local MVP database. Production migrations should be explicit.
     init_db()
     yield
 
 
 app = FastAPI(
-    title="KURGIN Backend API",
-    version="1.1.0-auth-mvp",
-    description="KURGIN Backend Auth MVP V1. Local auth/roles/JWT scaffold.",
+    title=settings.app_name,
+    version=settings.api_version,
+    description="KURGIN Backend Auth MVP V1. Local auth logic with hashed passwords and JWT access tokens.",
     lifespan=lifespan,
 )
 
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
@@ -36,12 +32,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "service": "kurgin-backend",
-        "version": "1.1.0-auth-mvp",
-        "environment": settings.environment,
-    }
+    return {"status": "ok", "service": "kurgin-backend", "version": settings.api_version}
 
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
