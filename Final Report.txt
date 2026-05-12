@@ -1,0 +1,41 @@
+KURGIN_BACKEND_AUTH_CONTRACT_V1 — Final Report
+
+Decision:
+Backend is NOT READY for real authorization data yet.
+
+Frontend status:
+1. /score/ gateway: ready.
+2. Diamonds → Analyzer: ready on frontend level.
+3. /workspace/ professional access layer: ready as V1 public access page.
+
+Backend status:
+Auth provider: not confirmed.
+User DB: not confirmed.
+Roles: not implemented server-side.
+Sessions: not implemented.
+Payments persistence: not implemented.
+Workspace private data: not implemented.
+Admin audit logs: not implemented.
+
+This package provides:
+- OpenAPI contract;
+- PostgreSQL schema draft;
+- initial roles/plans seed;
+- security checklist;
+- env variable checklist;
+- FastAPI scaffold;
+- integration contracts for Website / Analyzer / Admin.
+
+Implementation next steps:
+1. Choose backend stack.
+2. Create database.
+3. Implement auth endpoints.
+4. Implement server-side role checks.
+5. Implement payment webhook + plan activation.
+6. Implement report persistence.
+7. Implement workspace collections.
+8. Add admin audit logging.
+9. Connect Formula API.
+10. Connect Index/Admin sync.
+
+Do not accept real passwords, B2B prices, payment confirmations, or private client data until the backend is implemented and security-reviewed.

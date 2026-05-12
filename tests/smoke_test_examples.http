@@ -1,0 +1,51 @@
+### Health
+GET http://localhost:8000/health
+
+### Register dev user
+POST http://localhost:8000/auth/register
+Content-Type: application/json
+
+{
+  "email": "dev@example.com",
+  "password": "replace-with-strong-password",
+  "requested_role": "jeweler"
+}
+
+### Login
+POST http://localhost:8000/auth/login
+Content-Type: application/json
+
+{
+  "email": "dev@example.com",
+  "password": "replace-with-strong-password"
+}
+
+### Current user
+GET http://localhost:8000/auth/me
+Authorization: Bearer dev-placeholder-token
+
+### Access check
+POST http://localhost:8000/access/check
+Content-Type: application/json
+Authorization: Bearer dev-placeholder-token
+
+{
+  "resource": "workspace"
+}
+
+### Plans
+GET http://localhost:8000/plans
+
+### Score calculate stub
+POST http://localhost:8000/score/calculate
+Content-Type: application/json
+Authorization: Bearer dev-placeholder-token
+
+{
+  "shape": "ROUND",
+  "crownAngle": 34.5,
+  "pavilionAngle": 40.75,
+  "tablePercent": 56,
+  "depthPercent": 61.5,
+  "language": "RU"
+}

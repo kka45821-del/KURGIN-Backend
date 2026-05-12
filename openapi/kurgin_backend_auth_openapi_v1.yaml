@@ -1,0 +1,421 @@
+openapi: 3.1.0
+info:
+  title: KURGIN Backend Auth API
+  version: 1.0.0
+  description: |
+    Backend contract for KURGIN auth, access, payments, Analyzer reports,
+    Workspace collections, and Admin audit logs.
+servers:
+  - url: https://api.cvdrap.ru
+    description: Production API placeholder
+  - url: http://localhost:8000
+    description: Local development
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: OK
+  /auth/register:
+    post:
+      summary: Register user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Email already exists
+  /auth/login:
+    post:
+      summary: Login user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Logged in
+          headers:
+            Set-Cookie:
+              description: Optional HttpOnly refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+  /auth/logout:
+    post:
+      summary: Logout user
+      responses:
+        '204':
+          description: Logged out
+  /auth/me:
+    get:
+      summary: Current authenticated user
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Not authenticated
+  /access/check:
+    post:
+      summary: Check access to resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessCheckRequest'
+      responses:
+        '200':
+          description: Access decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessCheckResponse'
+  /plans:
+    get:
+      summary: List plans
+      security: []
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+  /payments/checkout:
+    post:
+      summary: Create checkout session
+      description: Guest users may checkout, but the backend must persist payment status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '201':
+          description: Checkout created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+  /payments/webhook:
+    post:
+      summary: Payment provider webhook
+      security: []
+      description: Validate provider signature before accepting.
+      responses:
+        '200':
+          description: Webhook accepted
+  /score/calculate:
+    post:
+      summary: Calculate KURGIN Score through protected backend
+      description: Formula must not be exposed in public frontend.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoreRequest'
+      responses:
+        '200':
+          description: Score result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreResponse'
+        '403':
+          description: Access denied
+  /reports:
+    get:
+      summary: List user reports
+      responses:
+        '200':
+          description: Reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+    post:
+      summary: Save Analyzer report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreateRequest'
+      responses:
+        '201':
+          description: Report saved
+  /workspace/collections:
+    get:
+      summary: List Workspace collections
+      responses:
+        '200':
+          description: Collections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collection'
+    post:
+      summary: Create Workspace collection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionCreateRequest'
+      responses:
+        '201':
+          description: Collection created
+  /admin/audit:
+    get:
+      summary: List admin audit events
+      description: Admin-only endpoint.
+      responses:
+        '200':
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditEvent'
+        '403':
+          description: Admin role required
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+        requested_role:
+          type: string
+          enum: [buyer, jeweler, designer, gemologist, partner]
+          default: buyer
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          const: bearer
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+        plan:
+          type: string
+        access:
+          type: object
+          additionalProperties: true
+    AccessCheckRequest:
+      type: object
+      required: [resource]
+      properties:
+        resource:
+          type: string
+          enum: [score_single, score_excel, professional_analytics, workspace, admin, partner_prices]
+    AccessCheckResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+        required_plan:
+          type: string
+          nullable: true
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price_minor:
+          type: integer
+        currency:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+    CheckoutRequest:
+      type: object
+      required: [plan_id]
+      properties:
+        plan_id:
+          type: string
+        email:
+          type: string
+          format: email
+          description: Required for guest checkout
+    CheckoutResponse:
+      type: object
+      properties:
+        checkout_id:
+          type: string
+        payment_url:
+          type: string
+          format: uri
+        status:
+          type: string
+          enum: [created, pending]
+    ScoreRequest:
+      type: object
+      required: [shape]
+      properties:
+        shape:
+          type: string
+        reportNumber:
+          type: string
+        crownAngle:
+          type: number
+        pavilionAngle:
+          type: number
+        tablePercent:
+          type: number
+        depthPercent:
+          type: number
+        crownPercent:
+          type: number
+        pavilionPercent:
+          type: number
+        girdlePercent:
+          type: number
+        language:
+          type: string
+          enum: [RU, EN]
+    ScoreResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        result:
+          type: object
+          additionalProperties: true
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        report_level:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    ReportCreateRequest:
+      type: object
+      required: [report_level, payload]
+      properties:
+        report_level:
+          type: string
+          enum: [score_only, short, detailed, full, professional]
+        payload:
+          type: object
+          additionalProperties: true
+    Collection:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+    CollectionCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        client_name:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        actor_user_id:
+          type: string
+        action:
+          type: string
+        target_type:
+          type: string
+        target_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
