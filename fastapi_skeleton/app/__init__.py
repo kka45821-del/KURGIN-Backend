@@ -1,1 +1,0 @@
-"""KURGIN Backend API scaffold."""

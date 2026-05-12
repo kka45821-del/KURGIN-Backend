@@ -4,5 +4,7 @@ pydantic-settings==2.5.2
 email-validator==2.2.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+# Passlib 1.7.4 is not compatible with bcrypt 4.1+/5.x version metadata changes on Python 3.13.
+bcrypt>=4.0.1,<4.1
 # Python 3.13-compatible psycopg binary range. The old pin psycopg[binary]==3.2.1 fails on Python 3.13.
 psycopg[binary]>=3.2.13,<3.4

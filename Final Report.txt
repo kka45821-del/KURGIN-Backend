@@ -1,41 +1,51 @@
-KURGIN_BACKEND_AUTH_CONTRACT_V1 — Final Report
+KURGIN Backend Auth MVP V1 — Final Report
 
-Decision:
-Backend is NOT READY for real authorization data yet.
+Scope
+-----
+Converted the existing FastAPI scaffold into a local Auth MVP.
 
-Frontend status:
-1. /score/ gateway: ready.
-2. Diamonds → Analyzer: ready on frontend level.
-3. /workspace/ professional access layer: ready as V1 public access page.
+Implemented
+-----------
+1. Config layer with .env.example and KURGIN_ environment prefix.
+2. Local SQLite DB initializer for MVP auth data.
+3. Password hashing via passlib/bcrypt.
+4. JWT access tokens via python-jose.
+5. Real /auth/register with hashed password storage.
+6. Real /auth/login with password verification.
+7. Protected /auth/me from JWT bearer token.
+8. Role/plan access policy through /access/check.
+9. Payment status contract through /payments/checkout and /payments/{id}.
+10. Workspace collection persistence for professional roles.
+11. Plans loaded from local DB seed.
+12. Smoke test covering health, auth, access, payments and workspace.
+13. README_AUTH_MVP.md with local run commands.
 
-Backend status:
-Auth provider: not confirmed.
-User DB: not confirmed.
-Roles: not implemented server-side.
-Sessions: not implemented.
-Payments persistence: not implemented.
-Workspace private data: not implemented.
-Admin audit logs: not implemented.
+Not Production Yet
+------------------
+This MVP is not production authentication. Before real users, KURGIN still needs:
+- PostgreSQL migration;
+- refresh-token sessions;
+- email verification;
+- password reset;
+- rate limiting;
+- real payment provider integration;
+- audit log expansion;
+- Admin role management;
+- deployment secrets in environment variables;
+- CORS hardening for deployment domains.
 
-This package provides:
-- OpenAPI contract;
-- PostgreSQL schema draft;
-- initial roles/plans seed;
-- security checklist;
-- env variable checklist;
-- FastAPI scaffold;
-- integration contracts for Website / Analyzer / Admin.
+Security Notes
+--------------
+No real secrets included.
+No API keys included.
+No payment provider secrets included.
+No production database credentials included.
 
-Implementation next steps:
-1. Choose backend stack.
-2. Create database.
-3. Implement auth endpoints.
-4. Implement server-side role checks.
-5. Implement payment webhook + plan activation.
-6. Implement report persistence.
-7. Implement workspace collections.
-8. Add admin audit logging.
-9. Connect Formula API.
-10. Connect Index/Admin sync.
+Local Test Command
+------------------
+cd fastapi_skeleton
+pip install -r requirements-dev.txt
+python tools/local_smoke_test.py
 
-Do not accept real passwords, B2B prices, payment confirmations, or private client data until the backend is implemented and security-reviewed.
+Expected:
+KURGIN backend auth MVP smoke test passed.
