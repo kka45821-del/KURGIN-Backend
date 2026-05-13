@@ -11,9 +11,9 @@ from passlib.context import CryptContext
 from .config import settings
 from .db import get_user_by_id
 
-try:  # Preferred dependency from requirements.txt
+try:
     from jose import JWTError, jwt
-except Exception:  # Local fallback for environments with PyJWT but without python-jose
+except Exception:
     import jwt  # type: ignore
     from jwt import InvalidTokenError as JWTError  # type: ignore
 
@@ -29,13 +29,6 @@ def _bcrypt_bytes(password: str) -> bytes:
 
 
 def hash_password(password: str) -> str:
-    """Hash password with passlib/bcrypt and fallback to direct bcrypt.
-
-    The fallback exists because some Python 3.13 environments combine passlib
-    1.7.4 with a newer bcrypt backend that raises during backend detection.
-    Requirements pin bcrypt to a passlib-compatible range, but this keeps local
-    smoke tests resilient.
-    """
     try:
         return _pwd_context.hash(password)
     except Exception:
@@ -57,6 +50,7 @@ def create_access_token(user: dict[str, Any]) -> str:
         "email": user["email"],
         "roles": user.get("roles", []),
         "plan": user.get("plan", "free"),
+        "pending_roles": user.get("pending_roles", []),
         "iss": settings.jwt_issuer,
         "aud": settings.jwt_audience,
         "iat": int(now.timestamp()),

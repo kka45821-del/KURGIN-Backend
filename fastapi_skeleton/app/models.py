@@ -1,4 +1,14 @@
+from __future__ import annotations
+
 from pydantic import BaseModel, EmailStr, Field
+
+
+class RoleRequestPublic(BaseModel):
+    id: str
+    requested_role: str
+    status: str
+    created_at: str
+    decided_at: str | None = None
 
 
 class UserPublic(BaseModel):
@@ -7,6 +17,8 @@ class UserPublic(BaseModel):
     roles: list[str]
     plan: str
     status: str = "active"
+    pending_roles: list[str] = Field(default_factory=list)
+    role_requests: list[RoleRequestPublic] = Field(default_factory=list)
 
 
 class RegisterRequest(BaseModel):
@@ -38,6 +50,11 @@ class AccessCheckResponse(BaseModel):
     reason: str
     user_plan: str
     user_roles: list[str]
+    pending_roles: list[str] = Field(default_factory=list)
+
+
+class RoleRequestResponse(BaseModel):
+    items: list[RoleRequestPublic]
 
 
 class PaymentCheckoutRequest(BaseModel):
@@ -53,3 +70,24 @@ class PaymentStatusResponse(BaseModel):
     amount_minor: int
     currency: str
     message: str | None = None
+
+
+class CollectionCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    client_name: str | None = Field(default=None, max_length=160)
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+class CollectionPublic(BaseModel):
+    id: str
+    owner_user_id: str
+    title: str
+    client_name: str | None = None
+    notes: str | None = None
+    status: str = "draft"
+
+
+class CollectionListResponse(BaseModel):
+    items: list[CollectionPublic]
+    owner: str
+    status: str = "ok"
